@@ -1,0 +1,15 @@
+{
+  "sends": [
+    {
+      "date": "2026-10-13",
+      "scenario_ids": [
+        "ridgeline_valuation",
+        "aldergate_prentice"
+      ],
+      "invoice_nos": [
+        "RVP-2026-151",
+        "APW-2026-91202"
+      ]
+    }
+  ]
+}
