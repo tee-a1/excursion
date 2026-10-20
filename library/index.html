@@ -70,6 +70,18 @@
         <label class="field">Title <input class="input" name="title" required></label>
         <label class="field">Author <input class="input" name="author"></label>
         <label class="field">Cover image URL <input class="input" name="cover" type="url"></label>
+        <div class="field spine-field">
+            <span>Spine photo</span>
+            <div class="spine-field__row">
+                <img class="spine-field__preview" id="spine-preview" alt="Spine photo" hidden>
+                <label class="button" for="spine-file" id="spine-choose">Choose photo</label>
+                <input type="file" id="spine-file" accept="image/*" hidden>
+                <button class="button" type="button" id="spine-remove" hidden>Remove</button>
+                <small class="spine-field__hint">A photo of the book's spine makes the shelf show your exact copy.</small>
+            </div>
+            <input type="hidden" name="spine">
+            <input type="hidden" name="spineRatio">
+        </div>
         <div class="field-row">
             <label class="field">Shelf
                 <select class="input" name="status">

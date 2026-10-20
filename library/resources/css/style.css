@@ -202,6 +202,27 @@ body {
 
 .book:hover, .book:focus-visible { transform: translateY(-12px); outline: none; }
 
+/* Spine drawn from the edition's cover: its left edge is what wraps onto the spine. */
+.book--cover {
+    color: #fbf3e2;
+    background:
+        linear-gradient(90deg, rgba(0, 0, 0, 0.45), rgba(255, 255, 255, 0.12) 30%, rgba(255, 255, 255, 0) 55%, rgba(0, 0, 0, 0.5)),
+        linear-gradient(rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.18)),
+        var(--cover) left center / auto 100% no-repeat,
+        var(--binding);
+}
+
+.book--cover .book__title, .book--cover .book__author { text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 6px rgba(0, 0, 0, 0.6); }
+
+/* A photo of the real spine already carries its own title. */
+.book--photo {
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    box-shadow: inset 3px 0 4px rgba(0, 0, 0, 0.35), inset -3px 0 4px rgba(0, 0, 0, 0.35), 2px 0 3px rgba(0, 0, 0, 0.5);
+}
+
+.book--photo > * { visibility: hidden; }
+
 .book__title, .book__author {
     writing-mode: vertical-rl;
     white-space: nowrap;
@@ -274,6 +295,10 @@ body {
 .field .input { margin-top: 0; }
 .field-row { display: flex; gap: 16px; flex-wrap: wrap; }
 .field-row .field { flex: 1; min-width: 140px; }
+
+.spine-field__row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 4px; }
+.spine-field__preview { width: 28px; height: 120px; object-fit: fill; box-shadow: 1px 2px 5px rgba(0, 0, 0, 0.4); }
+.spine-field__hint { flex-basis: 100%; font-family: var(--serif); font-style: italic; font-size: 15px; color: #6b604f; }
 
 .lookup { display: flex; gap: 8px; margin-bottom: 6px; }
 

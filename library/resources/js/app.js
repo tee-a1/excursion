@@ -97,6 +97,8 @@ async function syncCollection() {
             title: entry.title || book.title || (isbn ? `ISBN ${isbn}` : ""),
             author: entry.author || book.author,
             cover: entry.cover || (isbn ? isbnCover(isbn) : book.cover),
+            spine: entry.spine || book.spine,
+            spineRatio: entry.spine ? entry.spineRatio || 0.16 : book.spineRatio,
         });
         changed = true;
     }
@@ -124,11 +126,12 @@ function hashOf(text) {
 // Each book keeps the same binding, thickness and height every time it's drawn.
 function spineFor(book) {
     const hash = hashOf(book.title + (book.author || ""));
-    return {
-        color: SPINE_COLORS[hash % SPINE_COLORS.length],
-        width: Math.round(Math.min(68, Math.max(38, 26 + book.title.length * 1.1 + (hash % 4) * 3))),
-        height: 228 + ((hash >> 4) % 6) * 10,
-    };
+    const height = 228 + ((hash >> 4) % 6) * 10;
+    // A spine photo keeps its real proportions; otherwise thickness follows the title length.
+    const width = book.spine && book.spineRatio
+        ? Math.min(90, Math.max(24, height * Number(book.spineRatio)))
+        : Math.min(68, Math.max(38, 26 + book.title.length * 1.1 + (hash % 4) * 3));
+    return { color: SPINE_COLORS[hash % SPINE_COLORS.length], width: Math.round(width), height };
 }
 
 const surname = (author) => (author || "").split(",")[0].trim().split(/\s+/).pop() || "";
@@ -162,6 +165,19 @@ function bookElement(book) {
     el.querySelector(".book__title").textContent = book.title;
     el.querySelector(".book__author").textContent = surname(book.author);
     el.querySelector(".book__rating").textContent = "✦".repeat(book.rating || 0);
+
+    // Spine photo first, then the edition's cover art, then plain leather.
+    if (book.spine) {
+        el.classList.add("book--photo");
+        el.style.backgroundImage = `url("${book.spine}")`;
+    } else if (book.cover) {
+        const probe = new Image();
+        probe.onload = () => {
+            el.classList.add("book--cover");
+            el.style.setProperty("--cover", `url("${book.cover}")`);
+        };
+        probe.src = book.cover;
+    }
     return el;
 }
 
@@ -219,13 +235,15 @@ function openDialog(book = null) {
     $("#delete-book").textContent = "Delete";
 
     if (book) {
-        for (const key of ["isbn", "format", "title", "author", "cover", "status", "rating", "notes"]) {
+        for (const key of ["isbn", "format", "title", "author", "cover", "spine", "spineRatio", "status", "rating", "notes"]) {
             form.elements[key].value = book[key] ?? "";
         }
         form.elements.format.value ||= "hardcover";
     } else if (currentShelf !== "all") {
         form.elements.status.value = currentShelf;
     }
+    if (!book) form.elements.spine.value = form.elements.spineRatio.value = "";
+    showSpine();
     showCover(form.elements.cover.value);
     dialog.showModal();
 }
@@ -237,6 +255,7 @@ dialog.addEventListener("close", () => {
     data.title = data.title.trim();
     data.author = data.author.trim();
     data.isbn = cleanIsbn(data.isbn);
+    data.spineRatio = Number(data.spineRatio) || 0;
     data.rating = Number(data.rating);
     if (!data.title) return;
 
@@ -337,6 +356,42 @@ form.elements.isbn.addEventListener("change", async () => {
     if (!details) return;
     if (!form.elements.title.value) form.elements.title.value = details.title;
     if (!form.elements.author.value) form.elements.author.value = details.author;
+});
+
+/* SPINE PHOTO */
+
+const SPINE_PHOTO_HEIGHT = 360;
+
+function showSpine() {
+    const url = form.elements.spine.value;
+    $("#spine-preview").hidden = $("#spine-remove").hidden = !url;
+    $("#spine-choose").textContent = url ? "Replace photo" : "Choose photo";
+    if (url) $("#spine-preview").src = url;
+}
+
+// Shrink the photo so hundreds of spines still fit in browser storage.
+$("#spine-file").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const img = new Image();
+    img.onload = () => {
+        const scale = SPINE_PHOTO_HEIGHT / img.naturalHeight;
+        const canvas = document.createElement("canvas");
+        canvas.height = SPINE_PHOTO_HEIGHT;
+        canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+        form.elements.spine.value = canvas.toDataURL("image/jpeg", 0.8);
+        form.elements.spineRatio.value = (img.naturalWidth / img.naturalHeight).toFixed(3);
+        URL.revokeObjectURL(img.src);
+        showSpine();
+    };
+    img.src = URL.createObjectURL(file);
+    e.target.value = "";
+});
+
+$("#spine-remove").addEventListener("click", () => {
+    form.elements.spine.value = form.elements.spineRatio.value = "";
+    showSpine();
 });
 
 $("#dialog-cover").addEventListener("error", (e) => (e.target.hidden = true));
