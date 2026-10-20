@@ -1,7 +1,9 @@
 const STORAGE_KEY = "my-library";
 const REMOVED_KEY = "my-library-removed";
-const BOOKS_PER_SHELF = 8;
-const SPINE_COLORS = ["#8c2f39", "#2a6f97", "#386641", "#9c6644", "#5e548e", "#bc6c25", "#264653", "#6d597a"];
+const SHELF_PADDING = 32;
+const SPINE_GAP = 3;
+// Leather bindings: oxblood, bottle green, navy, tan, plum, ochre, umber, slate.
+const SPINE_COLORS = ["#5c1d1d", "#1f3b2d", "#1b2a46", "#6e4a2a", "#47263a", "#7a5626", "#3a2a1f", "#2c3438"];
 
 let books = load();
 let currentShelf = "all";
@@ -113,11 +115,23 @@ async function syncCollection() {
 
 /* RENDERING */
 
-function colorFor(text) {
+function hashOf(text) {
     let hash = 0;
     for (const ch of text) hash = (hash * 31 + ch.charCodeAt(0)) | 0;
-    return SPINE_COLORS[Math.abs(hash) % SPINE_COLORS.length];
+    return Math.abs(hash);
 }
+
+// Each book keeps the same binding, thickness and height every time it's drawn.
+function spineFor(book) {
+    const hash = hashOf(book.title + (book.author || ""));
+    return {
+        color: SPINE_COLORS[hash % SPINE_COLORS.length],
+        width: Math.round(Math.min(68, Math.max(38, 26 + book.title.length * 1.1 + (hash % 4) * 3))),
+        height: 228 + ((hash >> 4) % 6) * 10,
+    };
+}
+
+const surname = (author) => (author || "").split(",")[0].trim().split(/\s+/).pop() || "";
 
 function visibleBooks() {
     const query = $("#filter").value.trim().toLowerCase();
@@ -135,55 +149,61 @@ function visibleBooks() {
 }
 
 function bookElement(book) {
+    const spine = spineFor(book);
     const el = document.createElement("button");
     el.className = "book";
-    el.title = `${book.title}${book.author ? " — " + book.author : ""}`;
-    el.style.background = colorFor(book.title);
+    el.title = `${book.title}${book.author ? " — " + book.author : ""}${book.format === "kindle" ? " (Kindle)" : ""}`;
+    el.style.setProperty("--binding", spine.color);
+    el.style.width = `${spine.width}px`;
+    el.style.height = `${spine.height}px`;
     el.addEventListener("click", () => openDialog(book));
 
-    const plain = document.createElement("div");
-    plain.className = "book__plain";
-    plain.innerHTML = `<span class="book__title"></span><span class="book__author"></span>`;
-    plain.querySelector(".book__title").textContent = book.title;
-    plain.querySelector(".book__author").textContent = book.author || "";
-    if (book.format === "kindle") el.title += " (Kindle)";
-
-    if (book.cover) {
-        const img = document.createElement("img");
-        img.src = book.cover;
-        img.alt = book.title;
-        img.loading = "lazy";
-        img.onerror = () => img.replaceWith(plain);
-        el.append(img);
-    } else {
-        el.append(plain);
-    }
-
-    if (book.rating > 0) {
-        const badge = document.createElement("span");
-        badge.className = "book__badge";
-        badge.textContent = "★".repeat(book.rating);
-        el.append(badge);
-    }
+    el.innerHTML = `<span class="book__title"></span><span class="book__rating"></span><span class="book__author"></span>`;
+    el.querySelector(".book__title").textContent = book.title;
+    el.querySelector(".book__author").textContent = surname(book.author);
+    el.querySelector(".book__rating").textContent = "✦".repeat(book.rating || 0);
     return el;
 }
 
+// Fill each shelf to the width of the bookcase, like books packed side by side.
 function render() {
     const list = visibleBooks();
+    bookcase.hidden = false;
+    const shelfWidth = bookcase.clientWidth - SHELF_PADDING;
     bookcase.innerHTML = "";
 
-    for (let i = 0; i < list.length; i += BOOKS_PER_SHELF) {
-        const shelf = document.createElement("div");
-        shelf.className = "shelf";
-        list.slice(i, i + BOOKS_PER_SHELF).forEach((b) => shelf.append(bookElement(b)));
-        bookcase.append(shelf);
+    let shelf = null;
+    let used = 0;
+    for (const book of list) {
+        const width = spineFor(book).width + SPINE_GAP;
+        if (!shelf || used + width > shelfWidth) {
+            shelf = document.createElement("div");
+            shelf.className = "shelf";
+            bookcase.append(shelf);
+            used = 0;
+        }
+        shelf.append(bookElement(book));
+        used += width;
     }
 
     $("#empty").hidden = list.length > 0;
+    bookcase.hidden = list.length === 0;
 
     const count = (s) => books.filter((b) => b.status === s).length;
     $("#stats").textContent =
-        `${books.length} books · ${count("reading")} reading · ${count("want")} want to read · ${count("read")} read`;
+        `${books.length} volumes · ${count("reading")} reading · ${count("want")} to read · ${count("read")} read`;
+}
+
+let resizeTimer;
+window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(render, 120);
+});
+
+function showCover(url) {
+    const img = $("#dialog-cover");
+    img.hidden = !url;
+    if (url) img.src = url;
 }
 
 /* ADD / EDIT */
@@ -206,6 +226,7 @@ function openDialog(book = null) {
     } else if (currentShelf !== "all") {
         form.elements.status.value = currentShelf;
     }
+    showCover(form.elements.cover.value);
     dialog.showModal();
 }
 
@@ -269,6 +290,7 @@ async function lookup() {
                 form.elements.title.value = doc.title;
                 form.elements.author.value = author;
                 form.elements.cover.value = cover.replace("-M", "-L");
+                showCover(form.elements.cover.value);
                 if (form.elements.format.value !== "hardcover") {
                     results.innerHTML = "";
                     return;
@@ -276,6 +298,7 @@ async function lookup() {
                 results.innerHTML = "<li>Looking for a hardcover edition…</li>";
                 const hardcover = await findHardcoverCover(doc.key);
                 if (hardcover) form.elements.cover.value = hardcover;
+                showCover(form.elements.cover.value);
                 results.innerHTML = hardcover
                     ? "<li>Using the hardcover cover art.</li>"
                     : "<li>No hardcover cover found — using the default cover.</li>";
@@ -309,11 +332,15 @@ form.elements.isbn.addEventListener("change", async () => {
     const isbn = cleanIsbn(form.elements.isbn.value);
     if (isbn.length !== 10 && isbn.length !== 13) return;
     form.elements.cover.value = isbnCover(isbn);
+    showCover(form.elements.cover.value);
     const details = (await fetchIsbnDetails([isbn]))[isbn];
     if (!details) return;
     if (!form.elements.title.value) form.elements.title.value = details.title;
     if (!form.elements.author.value) form.elements.author.value = details.author;
 });
+
+$("#dialog-cover").addEventListener("error", (e) => (e.target.hidden = true));
+form.elements.cover.addEventListener("change", () => showCover(form.elements.cover.value));
 
 $("#lookup-btn").addEventListener("click", lookup);
 $("#lookup-query").addEventListener("keydown", (e) => {

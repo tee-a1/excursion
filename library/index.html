@@ -4,11 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>My Library</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pinyon+Script&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,500&display=swap">
   <link rel="stylesheet" type="text/css" href="resources/css/style.css">
  </head>
 <body>
 <header class="header">
     <h1 class="header--main">My Library</h1>
+    <p class="header--flourish" aria-hidden="true">❦</p>
     <p class="header--sub-header" id="stats"></p>
 </header>
 
@@ -42,7 +46,10 @@
 <!-- Add / edit dialog -->
 <dialog class="dialog" id="book-dialog">
     <form method="dialog" id="book-form">
-        <h2 class="header--secondary" id="dialog-title">Add a book</h2>
+        <div class="dialog__head">
+            <h2 class="header--secondary" id="dialog-title">Add a book</h2>
+            <img class="dialog__cover" id="dialog-cover" alt="Cover" hidden>
+        </div>
 
         <div class="lookup">
             <input class="input" id="lookup-query" type="search" placeholder="Search Open Library to auto-fill...">
