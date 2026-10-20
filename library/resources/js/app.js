@@ -30,6 +30,7 @@ function save() {
     } catch {
         // Storage unavailable (private mode etc.) – library still works for this session.
     }
+    window.librarySync?.changed();
 }
 
 // Books removed in the app that came from books.js, so they don't reappear on reload.
@@ -226,6 +227,7 @@ function showCover(url) {
 
 function openDialog(book = null) {
     editingId = book ? book.id : null;
+    dialog.returnValue = "";
     form.reset();
     $("#lookup-results").innerHTML = "";
     $("#lookup-query").value = "";
@@ -260,8 +262,10 @@ dialog.addEventListener("close", () => {
     if (!data.title) return;
     data.updated = Date.now();
 
-    if (editingId) {
-        Object.assign(books.find((b) => b.id === editingId), data);
+    // A sync can swap the book object while the dialog is open, so look it up again.
+    const editing = editingId && books.find((b) => b.id === editingId);
+    if (editing) {
+        Object.assign(editing, data);
     } else {
         books.push({ id: crypto.randomUUID(), added: Date.now(), ...data });
     }
@@ -279,6 +283,7 @@ $("#delete-book").addEventListener("click", (e) => {
         return;
     }
     if (book.seedKey) rememberRemoved(book.seedKey);
+    window.librarySync?.deleted(book);
     books = books.filter((b) => b.id !== editingId);
     save();
     dialog.close();

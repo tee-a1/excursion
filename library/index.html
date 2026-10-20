@@ -14,6 +14,11 @@
     <h1 class="header--main">My Library</h1>
     <p class="header--flourish" aria-hidden="true">❦</p>
     <p class="header--sub-header" id="stats"></p>
+    <p class="sync" id="sync" hidden>
+        <span id="sync-status"></span>
+        <button class="button button--link" id="sync-signin" type="button">Sign in to sync</button>
+        <button class="button button--link" id="sync-signout" type="button" hidden>Sign out</button>
+    </p>
 </header>
 
 <section class="toolbar">
@@ -112,7 +117,26 @@
     </form>
 </dialog>
 
+<!-- Sign-in for syncing across devices -->
+<dialog class="dialog" id="sync-dialog">
+    <form id="sync-form">
+        <h2 class="header--secondary">Sync your library</h2>
+        <p class="sync-dialog__text" id="sync-intro">Enter your email. We'll send a sign-in link and a 6-digit code.</p>
+        <label class="field" id="sync-email-field">Email <input class="input" id="sync-email" type="email" autocomplete="email" required></label>
+        <label class="field" id="sync-code-field" hidden>Code from the email <input class="input" id="sync-code" inputmode="numeric" autocomplete="one-time-code" maxlength="10"></label>
+        <p class="sync-dialog__error" id="sync-error" hidden></p>
+        <div class="dialog__actions">
+            <span class="spacer"></span>
+            <button class="button" type="button" id="sync-cancel">Cancel</button>
+            <button class="button button--primary" type="submit" id="sync-submit">Send code</button>
+        </div>
+    </form>
+</dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="resources/js/config.js"></script>
 <script src="resources/js/books.js"></script>
 <script src="resources/js/app.js"></script>
+<script src="resources/js/sync.js"></script>
 </body>
 </html>

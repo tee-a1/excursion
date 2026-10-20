@@ -310,6 +310,13 @@ body {
 .dialog__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .spacer { flex: 1; }
 
+/* SYNC */
+
+.sync { margin: 8px 0 0; font-family: var(--serif); font-style: italic; font-size: 16px; color: var(--muted); display: flex; gap: 10px; justify-content: center; align-items: baseline; flex-wrap: wrap; }
+.sync .button--link { font-size: 22px; padding: 0 4px; }
+.sync-dialog__text { font-family: var(--serif); font-size: 18px; line-height: 34px; margin: 0 0 4px; }
+.sync-dialog__error { font-family: var(--serif); font-size: 17px; color: var(--danger); margin: 0; }
+
 /* FOOTER */
 
 .footer { display: flex; gap: 20px; justify-content: center; margin-top: 28px; }
