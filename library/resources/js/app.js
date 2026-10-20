@@ -161,8 +161,8 @@ function bookElement(book) {
     el.style.height = `${spine.height}px`;
     el.addEventListener("click", () => openDialog(book));
 
-    el.innerHTML = `<span class="book__title"></span><span class="book__rating"></span><span class="book__author"></span>`;
-    el.querySelector(".book__title").textContent = book.title;
+    el.setAttribute("aria-label", el.title);
+    el.innerHTML = `<span class="book__rating"></span><span class="book__author"></span>`;
     el.querySelector(".book__author").textContent = surname(book.author);
     el.querySelector(".book__rating").textContent = "✦".repeat(book.rating || 0);
 

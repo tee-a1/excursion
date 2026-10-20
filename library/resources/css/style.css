@@ -212,7 +212,7 @@ body {
         var(--binding);
 }
 
-.book--cover .book__title, .book--cover .book__author { text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 6px rgba(0, 0, 0, 0.6); }
+.book--cover .book__author { text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 6px rgba(0, 0, 0, 0.6); }
 
 /* A photo of the real spine already carries its own title. */
 .book--photo {
@@ -223,27 +223,17 @@ body {
 
 .book--photo > * { visibility: hidden; }
 
-.book__title, .book__author {
+/* The spine carries no title; rating and author sit at the foot, as on a real binding. */
+.book__rating { flex: none; font-size: 7px; line-height: 1; margin: auto 0 6px; white-space: nowrap; }
+.book__rating:empty { display: none; }
+
+.book__rating:empty + .book__author { margin-top: auto; }
+
+.book__author {
     writing-mode: vertical-rl;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-}
-
-.book__title {
-    flex: 1;
-    min-height: 0;
-    font-family: var(--script);
-    font-size: 21px;
-    line-height: 1;
-    padding-top: 6px;
-    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.6);
-}
-
-.book__rating { flex: none; font-size: 7px; line-height: 1; margin: 8px 0 6px; white-space: nowrap; }
-.book__rating:empty { display: none; }
-
-.book__author {
     flex: none;
     max-height: 56px;
     font-family: var(--serif);
