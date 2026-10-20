@@ -50,6 +50,16 @@
         </div>
         <ul class="lookup__results" id="lookup-results"></ul>
 
+        <div class="field-row">
+            <label class="field">ISBN <input class="input" name="isbn" inputmode="numeric" placeholder="Fills in details &amp; exact cover"></label>
+            <label class="field">Format
+                <select class="input" name="format">
+                    <option value="hardcover">Hardcover</option>
+                    <option value="paperback">Paperback</option>
+                    <option value="kindle">Kindle</option>
+                </select>
+            </label>
+        </div>
         <label class="field">Title <input class="input" name="title" required></label>
         <label class="field">Author <input class="input" name="author"></label>
         <label class="field">Cover image URL <input class="input" name="cover" type="url"></label>
@@ -83,6 +93,7 @@
     </form>
 </dialog>
 
+<script src="resources/js/books.js"></script>
 <script src="resources/js/app.js"></script>
 </body>
 </html>

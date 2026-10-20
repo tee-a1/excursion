@@ -1,4 +1,5 @@
 const STORAGE_KEY = "my-library";
+const REMOVED_KEY = "my-library-removed";
 const BOOKS_PER_SHELF = 8;
 const SPINE_COLORS = ["#8c2f39", "#2a6f97", "#386641", "#9c6644", "#5e548e", "#bc6c25", "#264653", "#6d597a"];
 
@@ -26,6 +27,87 @@ function save() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(books));
     } catch {
         // Storage unavailable (private mode etc.) – library still works for this session.
+    }
+}
+
+// Books removed in the app that came from books.js, so they don't reappear on reload.
+function removedSeeds() {
+    try {
+        return JSON.parse(localStorage.getItem(REMOVED_KEY)) || [];
+    } catch {
+        return [];
+    }
+}
+
+function rememberRemoved(seedKey) {
+    try {
+        localStorage.setItem(REMOVED_KEY, JSON.stringify([...removedSeeds(), seedKey]));
+    } catch {}
+}
+
+/* ISBN */
+
+const cleanIsbn = (isbn) => String(isbn || "").replace(/[^0-9Xx]/g, "").toUpperCase();
+
+// default=false makes Open Library 404 when it has no scan, so the spine shows instead of a blank image.
+const isbnCover = (isbn) => `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg?default=false`;
+
+// Look up title and author for many ISBNs in one request.
+async function fetchIsbnDetails(isbns) {
+    if (!isbns.length) return {};
+    try {
+        const keys = isbns.map((i) => `ISBN:${i}`).join(",");
+        const data = await (await fetch(`https://openlibrary.org/api/books?bibkeys=${keys}&format=json&jscmd=data`)).json();
+        const details = {};
+        for (const isbn of isbns) {
+            const entry = data[`ISBN:${isbn}`];
+            if (entry) details[isbn] = { title: entry.title, author: (entry.authors || []).map((a) => a.name).join(", ") };
+        }
+        return details;
+    } catch {
+        return {};
+    }
+}
+
+/* BOOKS.JS COLLECTION */
+
+async function syncCollection() {
+    if (typeof MY_BOOKS === "undefined") return;
+    const removed = removedSeeds();
+    let changed = false;
+
+    for (const entry of MY_BOOKS) {
+        const isbn = cleanIsbn(entry.isbn);
+        const seedKey = isbn || `${entry.title}|${entry.author || ""}`.toLowerCase();
+        if (removed.includes(seedKey)) continue;
+
+        let book = books.find((b) => b.seedKey === seedKey);
+        if (!book) {
+            book = { id: crypto.randomUUID(), added: Date.now(), seedKey, title: "", author: "", status: "read", rating: 0, notes: "" };
+            if (entry.status) book.status = entry.status;
+            if (entry.rating) book.rating = entry.rating;
+            books.push(book);
+        }
+        // books.js decides the edition details; shelf, rating and notes stay as set in the app.
+        Object.assign(book, {
+            isbn,
+            format: entry.format || (isbn ? "hardcover" : "kindle"),
+            title: entry.title || book.title || (isbn ? `ISBN ${isbn}` : ""),
+            author: entry.author || book.author,
+            cover: entry.cover || (isbn ? isbnCover(isbn) : book.cover),
+        });
+        changed = true;
+    }
+    if (!changed) return;
+    save();
+    render();
+
+    const missing = books.filter((b) => b.seedKey && b.isbn && b.title === `ISBN ${b.isbn}`);
+    const details = await fetchIsbnDetails(missing.map((b) => b.isbn));
+    for (const book of missing) Object.assign(book, details[book.isbn] || {});
+    if (Object.keys(details).length) {
+        save();
+        render();
     }
 }
 
@@ -64,6 +146,7 @@ function bookElement(book) {
     plain.innerHTML = `<span class="book__title"></span><span class="book__author"></span>`;
     plain.querySelector(".book__title").textContent = book.title;
     plain.querySelector(".book__author").textContent = book.author || "";
+    if (book.format === "kindle") el.title += " (Kindle)";
 
     if (book.cover) {
         const img = document.createElement("img");
@@ -114,9 +197,10 @@ function openDialog(book = null) {
     $("#delete-book").hidden = !book;
 
     if (book) {
-        for (const key of ["title", "author", "cover", "status", "rating", "notes"]) {
+        for (const key of ["isbn", "format", "title", "author", "cover", "status", "rating", "notes"]) {
             form.elements[key].value = book[key] ?? "";
         }
+        form.elements.format.value ||= "hardcover";
     } else if (currentShelf !== "all") {
         form.elements.status.value = currentShelf;
     }
@@ -129,6 +213,7 @@ dialog.addEventListener("close", () => {
     const data = Object.fromEntries(new FormData(form));
     data.title = data.title.trim();
     data.author = data.author.trim();
+    data.isbn = cleanIsbn(data.isbn);
     data.rating = Number(data.rating);
     if (!data.title) return;
 
@@ -144,6 +229,7 @@ dialog.addEventListener("close", () => {
 $("#delete-book").addEventListener("click", () => {
     const book = books.find((b) => b.id === editingId);
     if (!book || !confirm(`Remove "${book.title}" from your library?`)) return;
+    if (book.seedKey) rememberRemoved(book.seedKey);
     books = books.filter((b) => b.id !== editingId);
     save();
     dialog.close();
@@ -175,6 +261,10 @@ async function lookup() {
                 form.elements.title.value = doc.title;
                 form.elements.author.value = author;
                 form.elements.cover.value = cover.replace("-M", "-L");
+                if (form.elements.format.value !== "hardcover") {
+                    results.innerHTML = "";
+                    return;
+                }
                 results.innerHTML = "<li>Looking for a hardcover edition…</li>";
                 const hardcover = await findHardcoverCover(doc.key);
                 if (hardcover) form.elements.cover.value = hardcover;
@@ -205,6 +295,17 @@ async function findHardcoverCover(workKey) {
         return "";
     }
 }
+
+// Typing an ISBN pins the cover to that exact edition and fills in missing details.
+form.elements.isbn.addEventListener("change", async () => {
+    const isbn = cleanIsbn(form.elements.isbn.value);
+    if (isbn.length !== 10 && isbn.length !== 13) return;
+    form.elements.cover.value = isbnCover(isbn);
+    const details = (await fetchIsbnDetails([isbn]))[isbn];
+    if (!details) return;
+    if (!form.elements.title.value) form.elements.title.value = details.title;
+    if (!form.elements.author.value) form.elements.author.value = details.author;
+});
 
 $("#lookup-btn").addEventListener("click", lookup);
 $("#lookup-query").addEventListener("keydown", (e) => {
@@ -256,3 +357,4 @@ $("#sort").addEventListener("change", render);
 $("#add-book").addEventListener("click", () => openDialog());
 
 render();
+syncCollection();
