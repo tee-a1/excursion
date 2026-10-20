@@ -195,6 +195,8 @@ function openDialog(book = null) {
     $("#lookup-query").value = "";
     $("#dialog-title").textContent = book ? "Edit book" : "Add a book";
     $("#delete-book").hidden = !book;
+    delete $("#delete-book").dataset.armed;
+    $("#delete-book").textContent = "Delete";
 
     if (book) {
         for (const key of ["isbn", "format", "title", "author", "cover", "status", "rating", "notes"]) {
@@ -226,9 +228,15 @@ dialog.addEventListener("close", () => {
     render();
 });
 
-$("#delete-book").addEventListener("click", () => {
+// First click asks for confirmation on the button itself; the second click deletes.
+$("#delete-book").addEventListener("click", (e) => {
     const book = books.find((b) => b.id === editingId);
-    if (!book || !confirm(`Remove "${book.title}" from your library?`)) return;
+    if (!book) return;
+    if (!e.currentTarget.dataset.armed) {
+        e.currentTarget.dataset.armed = "true";
+        e.currentTarget.textContent = "Click again to delete";
+        return;
+    }
     if (book.seedKey) rememberRemoved(book.seedKey);
     books = books.filter((b) => b.id !== editingId);
     save();
