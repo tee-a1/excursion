@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Library</title>
+  <link rel="stylesheet" type="text/css" href="resources/css/style.css">
+ </head>
+<body>
+<header class="header">
+    <h1 class="header--main">My Library</h1>
+    <p class="header--sub-header" id="stats"></p>
+</header>
+
+<section class="toolbar">
+    <div class="tabs" role="tablist">
+        <button class="tab tab--active" data-shelf="all">All</button>
+        <button class="tab" data-shelf="reading">Reading</button>
+        <button class="tab" data-shelf="want">Want to read</button>
+        <button class="tab" data-shelf="read">Read</button>
+    </div>
+    <div class="controls">
+        <input class="input" id="filter" type="search" placeholder="Filter by title or author">
+        <select class="input" id="sort">
+            <option value="added">Recently added</option>
+            <option value="title">Title</option>
+            <option value="author">Author</option>
+            <option value="rating">Rating</option>
+        </select>
+        <button class="button button--primary" id="add-book">+ Add book</button>
+    </div>
+</section>
+
+<main id="bookcase" class="bookcase"></main>
+<p class="empty" id="empty" hidden>No books here yet. Click <strong>+ Add book</strong> to start your shelf.</p>
+
+<footer class="footer">
+    <button class="button button--link" id="export">Export library</button>
+    <label class="button button--link">Import library<input type="file" id="import" accept="application/json" hidden></label>
+</footer>
+
+<!-- Add / edit dialog -->
+<dialog class="dialog" id="book-dialog">
+    <form method="dialog" id="book-form">
+        <h2 class="header--secondary" id="dialog-title">Add a book</h2>
+
+        <div class="lookup">
+            <input class="input" id="lookup-query" type="search" placeholder="Search Open Library to auto-fill...">
+            <button class="button" type="button" id="lookup-btn">Search</button>
+        </div>
+        <ul class="lookup__results" id="lookup-results"></ul>
+
+        <label class="field">Title <input class="input" name="title" required></label>
+        <label class="field">Author <input class="input" name="author"></label>
+        <label class="field">Cover image URL <input class="input" name="cover" type="url"></label>
+        <div class="field-row">
+            <label class="field">Shelf
+                <select class="input" name="status">
+                    <option value="want">Want to read</option>
+                    <option value="reading">Reading</option>
+                    <option value="read">Read</option>
+                </select>
+            </label>
+            <label class="field">Rating
+                <select class="input" name="rating">
+                    <option value="0">—</option>
+                    <option value="1">★</option>
+                    <option value="2">★★</option>
+                    <option value="3">★★★</option>
+                    <option value="4">★★★★</option>
+                    <option value="5">★★★★★</option>
+                </select>
+            </label>
+        </div>
+        <label class="field">Notes <textarea class="input" name="notes" rows="3"></textarea></label>
+
+        <div class="dialog__actions">
+            <button class="button button--danger" type="button" id="delete-book" hidden>Delete</button>
+            <span class="spacer"></span>
+            <button class="button" value="cancel" formnovalidate>Cancel</button>
+            <button class="button button--primary" value="save">Save</button>
+        </div>
+    </form>
+</dialog>
+
+<script src="resources/js/app.js"></script>
+</body>
+</html>
