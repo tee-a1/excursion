@@ -159,7 +159,7 @@ async function lookup() {
 
     results.innerHTML = "<li>Searching…</li>";
     try {
-        const url = `https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=8&fields=title,author_name,cover_i,first_publish_year`;
+        const url = `https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=8&fields=key,title,author_name,cover_i,first_publish_year`;
         const { docs } = await (await fetch(url)).json();
         results.innerHTML = docs.length ? "" : "<li>No matches found.</li>";
 
@@ -171,16 +171,38 @@ async function lookup() {
             if (cover) li.querySelector("img").src = cover.replace("-M", "-S");
             li.querySelector(".t").textContent = doc.title;
             li.querySelector("small").textContent = [author, doc.first_publish_year].filter(Boolean).join(" · ");
-            li.addEventListener("click", () => {
+            li.addEventListener("click", async () => {
                 form.elements.title.value = doc.title;
                 form.elements.author.value = author;
-                form.elements.cover.value = cover;
-                results.innerHTML = "";
+                form.elements.cover.value = cover.replace("-M", "-L");
+                results.innerHTML = "<li>Looking for a hardcover edition…</li>";
+                const hardcover = await findHardcoverCover(doc.key);
+                if (hardcover) form.elements.cover.value = hardcover;
+                results.innerHTML = hardcover
+                    ? "<li>Using the hardcover cover art.</li>"
+                    : "<li>No hardcover cover found — using the default cover.</li>";
             });
             results.append(li);
         }
     } catch {
         results.innerHTML = "<li>Couldn't reach Open Library — fill in the details manually.</li>";
+    }
+}
+
+// Open Library groups every edition under a "work"; pick the first hardcover
+// edition that has a scanned cover, preferring English-language editions.
+async function findHardcoverCover(workKey) {
+    if (!workKey) return "";
+    try {
+        const { entries = [] } = await (await fetch(`https://openlibrary.org${workKey}/editions.json?limit=100`)).json();
+        const hardcovers = entries.filter(
+            (e) => /hard\s*(cover|back)/i.test(e.physical_format || "") && e.covers?.some((id) => id > 0)
+        );
+        const isEnglish = (e) => (e.languages || []).some((l) => l.key === "/languages/eng");
+        const best = hardcovers.find(isEnglish) || hardcovers[0];
+        return best ? `https://covers.openlibrary.org/b/id/${best.covers.find((id) => id > 0)}-L.jpg` : "";
+    } catch {
+        return "";
     }
 }
 
