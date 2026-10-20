@@ -258,6 +258,7 @@ dialog.addEventListener("close", () => {
     data.spineRatio = Number(data.spineRatio) || 0;
     data.rating = Number(data.rating);
     if (!data.title) return;
+    data.updated = Date.now();
 
     if (editingId) {
         Object.assign(books.find((b) => b.id === editingId), data);
@@ -416,15 +417,43 @@ $("#export").addEventListener("click", () => {
     URL.revokeObjectURL(link.href);
 });
 
+// The same book can come from another device's export: match it by id, then
+// edition, then title and author, and keep whichever copy was edited last.
+function sameBook(a, b) {
+    if (a.id && a.id === b.id) return true;
+    if (a.seedKey && a.seedKey === b.seedKey) return true;
+    if (a.isbn && a.isbn === b.isbn) return true;
+    const key = (x) => `${x.title}|${x.author || ""}`.trim().toLowerCase();
+    return !a.isbn && !b.isbn && key(a) === key(b);
+}
+
+function mergeBooks(imported) {
+    let added = 0;
+    let updated = 0;
+    for (const incoming of imported) {
+        if (!incoming || !incoming.title) continue;
+        const existing = books.find((b) => sameBook(b, incoming));
+        if (!existing) {
+            books.push({ id: crypto.randomUUID(), added: Date.now(), ...incoming });
+            added++;
+        } else if ((incoming.updated || 0) > (existing.updated || 0)) {
+            Object.assign(existing, incoming, { id: existing.id });
+            updated++;
+        }
+    }
+    return { added, updated };
+}
+
 $("#import").addEventListener("change", async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     try {
         const imported = JSON.parse(await file.text());
         if (!Array.isArray(imported)) throw new Error();
-        books = imported;
+        const { added, updated } = mergeBooks(imported);
         save();
         render();
+        alert(`Import finished: ${added} book${added === 1 ? "" : "s"} added, ${updated} updated.`);
     } catch {
         alert("That file doesn't look like a library export.");
     }
