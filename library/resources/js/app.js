@@ -161,7 +161,7 @@ function bookElement(book) {
     el.style.setProperty("--binding", spine.color);
     el.style.width = `${spine.width}px`;
     el.style.height = `${spine.height}px`;
-    el.addEventListener("click", () => openDialog(book));
+    el.addEventListener("click", () => openPreview(book));
 
     el.setAttribute("aria-label", el.title);
     el.innerHTML = `<span class="book__rating"></span><span class="book__author"></span>`;
@@ -240,6 +240,113 @@ function showCover(url) {
 
 /* ADD / EDIT */
 
+/* PREVIEW */
+
+const preview = $("#preview-dialog");
+const STATUS_LABELS = { reading: "Currently reading", want: "To read", read: "Read" };
+const FORMAT_LABELS = { hardcover: "Hardcover", paperback: "Paperback", kindle: "Kindle" };
+let previewId = null;
+
+const plainText = (html) => new DOMParser().parseFromString(html, "text/html").body.textContent.trim();
+
+// Google Books has the widest coverage of blurbs; Open Library fills the gaps.
+async function fetchDescription(book) {
+    try {
+        const q = book.isbn ? `isbn:${book.isbn}` : `intitle:${book.title}${book.author ? ` inauthor:${surname(book.author)}` : ""}`;
+        const { items = [] } = await (await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=3`)).json();
+        const found = items.find((i) => i.volumeInfo?.description);
+        if (found) return { text: plainText(found.volumeInfo.description), source: "Google Books" };
+    } catch {}
+    try {
+        let workKey = "";
+        if (book.isbn) {
+            const edition = await (await fetch(`https://openlibrary.org/isbn/${book.isbn}.json`)).json();
+            workKey = edition.works?.[0]?.key || "";
+        } else {
+            const params = new URLSearchParams({ title: book.title, author: book.author || "", limit: "1", fields: "key" });
+            workKey = (await (await fetch(`https://openlibrary.org/search.json?${params}`)).json()).docs?.[0]?.key || "";
+        }
+        if (workKey) {
+            const work = await (await fetch(`https://openlibrary.org${workKey}.json`)).json();
+            const text = typeof work.description === "string" ? work.description : work.description?.value;
+            if (text) return { text: text.split(/\n-{3,}|\n\s*\(\[source\]/)[0].trim(), source: "Open Library" };
+        }
+    } catch {}
+    return null;
+}
+
+function showDescription(text, source) {
+    const el = $("#preview-description");
+    el.textContent = text;
+    el.classList.add("preview__description--clamped");
+    $("#preview-more").hidden = true;
+    // Offer "Read more" only when the clamp actually hides text.
+    requestAnimationFrame(() => ($("#preview-more").hidden = el.scrollHeight <= el.clientHeight + 2));
+    $("#preview-source").hidden = !source;
+    $("#preview-source").textContent = source ? `Description from ${source}` : "";
+}
+
+async function openPreview(book) {
+    previewId = book.id;
+    const cover = $("#preview-cover");
+    cover.hidden = !book.cover;
+    if (book.cover) cover.src = book.cover;
+
+    $("#preview-title").textContent = book.title;
+    $("#preview-author").textContent = book.author || "";
+    $("#preview-meta").textContent = [
+        STATUS_LABELS[book.status],
+        FORMAT_LABELS[book.format],
+        book.rating ? "★".repeat(book.rating) : "",
+    ].filter(Boolean).join(" · ");
+
+    $("#preview-notes-section").hidden = !book.notes;
+    $("#preview-notes").textContent = book.notes || "";
+
+    if (book.description) {
+        showDescription(book.description, book.descriptionSource);
+    } else {
+        showDescription("Looking up a description…", "");
+        $("#preview-description").classList.add("preview__description--muted");
+    }
+    preview.showModal();
+
+    if (book.description) return;
+    const found = await fetchDescription(book);
+    $("#preview-description").classList.remove("preview__description--muted");
+    if (previewId !== book.id) return;
+    if (!found) {
+        showDescription("No description found. Tap Edit to add your own.", "");
+        $("#preview-description").classList.add("preview__description--muted");
+        return;
+    }
+    // Keep it with the book so it shows instantly next time and syncs to other devices.
+    const stored = books.find((b) => b.id === book.id);
+    if (stored) {
+        Object.assign(stored, { description: found.text, descriptionSource: found.source, updated: Date.now() });
+        save();
+    }
+    showDescription(found.text, found.source);
+}
+
+$("#preview-cover").addEventListener("error", (e) => (e.target.hidden = true));
+$("#preview-close").addEventListener("click", () => preview.close());
+$("#preview-more").addEventListener("click", () => {
+    $("#preview-description").classList.remove("preview__description--clamped");
+    $("#preview-more").hidden = true;
+});
+$("#preview-edit").addEventListener("click", () => {
+    const book = books.find((b) => b.id === previewId);
+    preview.close();
+    if (book) openDialog(book);
+});
+// Tapping the dimmed area around the card closes it.
+preview.addEventListener("click", (e) => {
+    const r = preview.getBoundingClientRect();
+    const outside = e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
+    if (e.target === preview && outside) preview.close();
+});
+
 function openDialog(book = null) {
     editingId = book ? book.id : null;
     dialog.returnValue = "";
@@ -252,7 +359,7 @@ function openDialog(book = null) {
     $("#delete-book").textContent = "Delete";
 
     if (book) {
-        for (const key of ["isbn", "format", "title", "author", "cover", "spine", "spineRatio", "status", "rating", "notes"]) {
+        for (const key of ["isbn", "format", "title", "author", "cover", "spine", "spineRatio", "status", "rating", "description", "notes"]) {
             form.elements[key].value = book[key] ?? "";
         }
         form.elements.format.value ||= "hardcover";
@@ -279,6 +386,9 @@ dialog.addEventListener("close", () => {
 
     // A sync can swap the book object while the dialog is open, so look it up again.
     const editing = editingId && books.find((b) => b.id === editingId);
+    data.description = data.description.trim();
+    // A description typed in by hand no longer comes from a catalogue.
+    if (data.description !== (editing?.description || "")) data.descriptionSource = "";
     if (editing) {
         Object.assign(editing, data);
     } else {

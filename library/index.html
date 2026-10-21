@@ -48,6 +48,32 @@
     <label class="button button--link">Import library<input type="file" id="import" accept="application/json" hidden></label>
 </footer>
 
+<!-- Book preview, shown when a book is tapped -->
+<dialog class="dialog preview" id="preview-dialog">
+    <div class="preview__head">
+        <img class="preview__cover" id="preview-cover" alt="" hidden>
+        <div class="preview__heading">
+            <h2 class="preview__title" id="preview-title"></h2>
+            <p class="preview__author" id="preview-author"></p>
+            <p class="preview__meta" id="preview-meta"></p>
+        </div>
+    </div>
+    <div class="preview__section">
+        <p class="preview__description" id="preview-description"></p>
+        <button class="button button--link preview__more" id="preview-more" type="button" hidden>Read more</button>
+        <p class="preview__source" id="preview-source" hidden></p>
+    </div>
+    <div class="preview__section" id="preview-notes-section" hidden>
+        <h3 class="preview__label">Your notes</h3>
+        <p class="preview__notes" id="preview-notes"></p>
+    </div>
+    <div class="dialog__actions">
+        <span class="spacer"></span>
+        <button class="button" type="button" id="preview-close">Close</button>
+        <button class="button button--primary" type="button" id="preview-edit">Edit</button>
+    </div>
+</dialog>
+
 <!-- Add / edit dialog -->
 <dialog class="dialog" id="book-dialog">
     <form method="dialog" id="book-form">
@@ -106,6 +132,7 @@
                 </select>
             </label>
         </div>
+        <label class="field">Description <textarea class="input" name="description" rows="3" placeholder="Filled in automatically when you open the book"></textarea></label>
         <label class="field">Notes <textarea class="input" name="notes" rows="3"></textarea></label>
 
         <div class="dialog__actions">

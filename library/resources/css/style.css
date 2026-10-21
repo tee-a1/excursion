@@ -375,6 +375,23 @@ body {
 .dialog__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .spacer { flex: 1; }
 
+/* PREVIEW — the book's card, on the same ruled paper */
+
+.preview__head { display: flex; gap: 18px; align-items: flex-start; }
+.preview__cover { width: 96px; height: 144px; object-fit: cover; flex: none; box-shadow: 2px 4px 10px rgba(0, 0, 0, 0.45); transform: rotate(-2deg); }
+.preview__heading { min-width: 0; }
+.preview__title { font-family: var(--script); font-weight: normal; font-size: 40px; line-height: 1.05; margin: 0 0 6px; text-wrap: balance; overflow-wrap: anywhere; }
+.preview__author { font-family: var(--serif); font-size: 20px; font-style: italic; margin: 0; }
+.preview__meta { font-family: var(--serif); font-variant: small-caps; letter-spacing: 0.06em; font-size: 15px; color: #6b604f; margin: 6px 0 0; }
+
+.preview__section { margin-top: 18px; }
+.preview__label { font-family: var(--script); font-weight: normal; font-size: 26px; margin: 0; }
+.preview__description, .preview__notes { font-family: var(--serif); font-size: 18px; line-height: 34px; margin: 0; white-space: pre-line; max-width: 65ch; }
+.preview__description--clamped { display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
+.preview__description--muted { font-style: italic; color: #6b604f; }
+.preview__more { color: var(--ink); font-size: 22px; padding: 0; text-decoration: underline; }
+.preview__source { font-family: var(--serif); font-style: italic; font-size: 14px; color: #8a8070; margin: 2px 0 0; }
+
 /* SYNC */
 
 .sync { margin: 8px 0 0; font-family: var(--serif); font-style: italic; font-size: 16px; color: var(--muted); display: flex; gap: 10px; justify-content: center; align-items: baseline; flex-wrap: wrap; }
