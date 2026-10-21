@@ -143,64 +143,59 @@ window.librarySync = {
     },
 };
 
-/* SIGN IN (email code, so it also works from a home-screen app) */
+/* SIGN IN (email and password, so it also works from a home-screen app) */
 
 const syncDialog = $("#sync-dialog");
-let codeSentTo = "";
 
-function showSyncStep(sent) {
-    $("#sync-email-field").hidden = sent;
-    $("#sync-code-field").hidden = !sent;
-    $("#sync-email").required = !sent;
-    $("#sync-code").required = sent;
-    $("#sync-submit").textContent = sent ? "Sign in" : "Send code";
-    $("#sync-intro").textContent = sent
-        ? `We sent a code to ${codeSentTo}. Enter it here, or open the link in the email on this device.`
-        : "Enter your email. We'll send a sign-in link and a 6-digit code.";
-}
-
-function showSyncError(text) {
+function showSyncMessage(text, isError = true) {
     $("#sync-error").hidden = !text;
     $("#sync-error").textContent = text || "";
+    $("#sync-error").classList.toggle("sync-dialog__error--info", !isError);
 }
 
 $("#sync-signin").addEventListener("click", () => {
-    codeSentTo = "";
     $("#sync-form").reset();
-    showSyncError("");
-    showSyncStep(false);
+    showSyncMessage("");
     syncDialog.showModal();
 });
 
 $("#sync-cancel").addEventListener("click", () => syncDialog.close());
 
+// "Sign in" submits the form; "Create account" is the other submit button.
 $("#sync-form").addEventListener("submit", async (e) => {
     e.preventDefault();
-    showSyncError("");
-    $("#sync-submit").disabled = true;
+    const creating = e.submitter?.id === "sync-create";
+    const email = $("#sync-email").value.trim();
+    const password = $("#sync-password").value;
+    showSyncMessage("");
+    for (const button of syncDialog.querySelectorAll("button")) button.disabled = true;
+
     try {
-        if (!codeSentTo) {
-            const email = $("#sync-email").value.trim();
-            const { error } = await db.auth.signInWithOtp({
+        if (creating) {
+            const { data, error } = await db.auth.signUp({
                 email,
+                password,
                 options: { emailRedirectTo: location.origin + location.pathname },
             });
             if (error) throw error;
-            codeSentTo = email;
-            showSyncStep(true);
+            if (data.session) {
+                syncDialog.close();
+            } else {
+                showSyncMessage(`Account created. Open the confirmation email sent to ${email}, then come back and sign in.`, false);
+            }
         } else {
-            const { error } = await db.auth.verifyOtp({
-                email: codeSentTo,
-                token: $("#sync-code").value.trim(),
-                type: "email",
-            });
+            const { error } = await db.auth.signInWithPassword({ email, password });
             if (error) throw error;
             syncDialog.close();
         }
     } catch (err) {
-        showSyncError(err.message || "Something went wrong. Check your connection and try again.");
+        showSyncMessage(
+            /invalid login/i.test(err.message) ? "That email and password don't match an account. Check them, or create an account first."
+            : /not confirmed/i.test(err.message) ? "Confirm your email first: open the link in the email Supabase sent you, then sign in."
+            : err.message || "Something went wrong. Check your connection and try again."
+        );
     } finally {
-        $("#sync-submit").disabled = false;
+        for (const button of syncDialog.querySelectorAll("button")) button.disabled = false;
     }
 });
 

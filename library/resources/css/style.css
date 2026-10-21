@@ -381,6 +381,7 @@ body {
 .sync .button--link { font-size: 22px; padding: 0 4px; }
 .sync-dialog__text { font-family: var(--serif); font-size: 18px; line-height: 34px; margin: 0 0 4px; }
 .sync-dialog__error { font-family: var(--serif); font-size: 17px; color: var(--danger); margin: 0; }
+.sync-dialog__error--info { color: var(--ink); }
 
 /* FOOTER */
 
