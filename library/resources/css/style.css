@@ -15,6 +15,9 @@
     --ink: #1c1712;
     --rule: #c9d3dc;
     --danger: #8e2b22;
+    --ribbon: #a3242c;
+    --ribbon-dark: #5e1016;
+    --slip: #ece2c6;
 
     --script: "Pinyon Script", "Snell Roundhand", "Apple Chancery", cursive;
     --serif: "Cormorant Garamond", "Garamond", "Baskerville", Georgia, serif;
@@ -181,6 +184,7 @@ body {
 }
 
 .book {
+    position: relative;
     flex: none;
     display: flex;
     flex-direction: column;
@@ -202,6 +206,66 @@ body {
 }
 
 .book:hover, .book:focus-visible { transform: translateY(-12px); outline: none; }
+
+/* Reading: a silk ribbon marker hangs from the book over the shelf edge. */
+.book--reading::after {
+    content: "";
+    position: absolute;
+    right: 28%;
+    bottom: -26px;
+    width: 8px;
+    height: 34px;
+    background: linear-gradient(90deg, var(--ribbon-dark), var(--ribbon) 45%, var(--ribbon-dark));
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%);
+    box-shadow: 0 2px 2px rgba(0, 0, 0, 0.4);
+    z-index: 1;
+}
+
+/* To read: a paper slip tucked into the top, as if marked to start next. */
+.book--want::after {
+    content: "";
+    position: absolute;
+    left: 30%;
+    top: -16px;
+    width: 11px;
+    height: 24px;
+    background: var(--slip);
+    box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.45);
+    transform: rotate(4deg);
+}
+
+/* Brass label holder on the front of the first shelf in each section. */
+.shelf__plate {
+    position: absolute;
+    right: 20px;
+    bottom: -17px;
+    z-index: 2;
+    padding: 1px 14px 2px;
+    background: linear-gradient(#e2c27e, var(--brass) 45%, #8c6d33);
+    color: #2b1d0e;
+    border-radius: 2px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    font-family: var(--serif);
+    font-variant: small-caps;
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+}
+
+/* Matching marks beside the tab names act as the key. */
+.tab[data-shelf="reading"]::before,
+.tab[data-shelf="want"]::before {
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 14px;
+    margin-right: 8px;
+    vertical-align: -1px;
+}
+
+.tab[data-shelf="reading"]::before { background: var(--ribbon); clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 78%, 0 100%); }
+.tab[data-shelf="want"]::before { background: var(--slip); transform: rotate(4deg); }
 
 /* Spine drawn from the edition's cover: its left edge is what wraps onto the spine. */
 .book--cover {

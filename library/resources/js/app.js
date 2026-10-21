@@ -2,6 +2,7 @@ const STORAGE_KEY = "my-library";
 const REMOVED_KEY = "my-library-removed";
 const SHELF_PADDING = 32;
 const SPINE_GAP = 3;
+const SECTIONS = [["reading", "Currently reading"], ["want", "To read"], ["read", "Read"]];
 // Leather bindings: oxblood, bottle green, navy, tan, plum, ochre, umber, slate.
 const SPINE_COLORS = ["#5c1d1d", "#1f3b2d", "#1b2a46", "#6e4a2a", "#47263a", "#7a5626", "#3a2a1f", "#2c3438"];
 
@@ -155,7 +156,7 @@ function visibleBooks() {
 function bookElement(book) {
     const spine = spineFor(book);
     const el = document.createElement("button");
-    el.className = "book";
+    el.className = `book book--${book.status}`;
     el.title = `${book.title}${book.author ? " — " + book.author : ""}${book.format === "kindle" ? " (Kindle)" : ""}`;
     el.style.setProperty("--binding", spine.color);
     el.style.width = `${spine.width}px`;
@@ -189,18 +190,32 @@ function render() {
     const shelfWidth = bookcase.clientWidth - SHELF_PADDING;
     bookcase.innerHTML = "";
 
-    let shelf = null;
-    let used = 0;
-    for (const book of list) {
-        const width = spineFor(book).width + SPINE_GAP;
-        if (!shelf || used + width > shelfWidth) {
-            shelf = document.createElement("div");
-            shelf.className = "shelf";
-            bookcase.append(shelf);
-            used = 0;
+    // "All" groups the books into sections, each starting on a shelf with a brass nameplate.
+    const sections = currentShelf === "all"
+        ? SECTIONS.map(([status, label]) => [label, list.filter((b) => b.status === status)])
+        : [[null, list]];
+
+    for (const [label, sectionBooks] of sections) {
+        let shelf = null;
+        let used = 0;
+        for (const book of sectionBooks) {
+            const width = spineFor(book).width + SPINE_GAP;
+            if (!shelf || used + width > shelfWidth) {
+                shelf = document.createElement("div");
+                shelf.className = "shelf";
+                if (label && !used && !bookcase.querySelector(`[data-section="${label}"]`)) {
+                    const plate = document.createElement("span");
+                    plate.className = "shelf__plate";
+                    plate.dataset.section = label;
+                    plate.textContent = label;
+                    shelf.append(plate);
+                }
+                bookcase.append(shelf);
+                used = 0;
+            }
+            shelf.append(bookElement(book));
+            used += width;
         }
-        shelf.append(bookElement(book));
-        used += width;
     }
 
     $("#empty").hidden = list.length > 0;
