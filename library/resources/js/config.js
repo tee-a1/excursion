@@ -2,5 +2,5 @@
 // from Supabase → Project Settings → API. The publishable (anon) key is meant
 // to be public; the database only lets each signed-in person see their own books.
 // Leave them empty to keep the library on this device only.
-const SUPABASE_URL = "";
-const SUPABASE_KEY = "";
+const SUPABASE_URL = "https://mcufopgpcepgqyksismz.supabase.co";
+const SUPABASE_KEY = "sb_publishable_4LHG2wim3wA76hLR9Xv9eQ_yszg4tdw";
